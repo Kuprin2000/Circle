@@ -18,50 +18,107 @@ enum class Mode
 	COUNT
 };
 
-struct UserInput
+bool verticesFromPoints(sf::VertexArray& vertices, sf::Vector2f& center)
 {
-	sf::Vector2f center = { WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 };
-	float radius = 100.0;
-	float start_angle = 0.0;
-	float end_angle = 1.5 * PI;
-};
+	std::cout << "Введите координату x центра окружности: ";
+	std::cin >> center.x;
+	std::cout << std::endl << "Введите координату y центра окружности: ";
+	std::cin >> center.y;
 
-UserInput getUserInput()
-{
-	// TODO: get user input
-	// TODO: get arc as two points (use atan2f())
+	sf::Vector2f M1;
+	sf::Vector2f M2;
+	std::cout << "Введите координату x первой точки, принадлежащей дуге окружности: ";
+	std::cin >> M1.x;
+	std::cout << std::endl << "Введите координату y: ";
+	std::cin >> M1.y;
+	std::cout << std::endl;
+	std::cout << "Введите координату x второй точки: ";
+	std::cin >> M2.x;
+	std::cout << std::endl << "Введите координату y: ";
+	std::cin >> M2.y;
 
-	return UserInput();
-}
+	sf::Vector2f radius_vector_1 = M1 - center;
+	sf::Vector2f radius_vector_2 = M2 - center;
+	float radius_1 = hypotf(radius_vector_1.x, radius_vector_1.y);
+	float radius_2 = hypotf(radius_vector_2.x, radius_vector_2.y);
 
-sf::VertexArray prepareVertices(const UserInput& user_input)
-{
-	float current_angle = user_input.start_angle;
+	if (fabs(radius_1 - radius_2) > FLT_EPSILON)
+	{
+		return false;
+	}
+
+	float start_angle = atan2(-radius_vector_1.y, radius_vector_1.x);
+	float finish_angle = atan2(-radius_vector_2.y, radius_vector_2.x);
+
+	if (start_angle > finish_angle)
+	{
+		std::swap(start_angle, finish_angle);
+	}
+
+	float current_angle = start_angle;
 	sf::Vector2f new_point;
-	sf::VertexArray result;
 
 	bool done = false;
 	while (!done)
 	{
-		if ((current_angle > user_input.end_angle) || fabs(current_angle - user_input.end_angle) < FLT_EPSILON)
+		if ((current_angle > finish_angle) || fabs(current_angle - finish_angle) < FLT_EPSILON)
 		{
-			current_angle = user_input.end_angle;
+			current_angle = finish_angle;
 			done = true;
 		}
 
-		new_point = user_input.center;
-		new_point += user_input.radius * sf::Vector2f(cosf(current_angle), -sinf(current_angle));
-		result.append(new_point);
+		new_point = center;
+		new_point += radius_1 * sf::Vector2f(cosf(current_angle), -sinf(current_angle));
+		vertices.append(new_point);
 
 		current_angle += ANGLE_STEP;
 	}
 
-	result.setPrimitiveType(sf::PrimitiveType::LinesStrip);
-	return result;
+	vertices.setPrimitiveType(sf::PrimitiveType::LinesStrip);
+
+	return true;
 }
 
-// TODO: don't use ConvexShape
-sf::ConvexShape prepareSector(const UserInput& user_input, const sf::VertexArray& vertices)
+void verticesFromAngles(sf::VertexArray& vertices, sf::Vector2f& center)
+{
+	float radius;
+	std::cout << "Введите координату x центра окружности: ";
+	std::cin >> center.x;
+	std::cout << std::endl << "Введите координату y центра окружности: ";
+	std::cin >> center.y;
+	std::cout << std::endl << "Введите радиус окружности: ";
+	std::cin >> radius;
+
+	float start_angle;
+	float finish_angle;
+	std::cout << "Введите угол начала дуги: ";
+	std::cin >> start_angle;
+	std::cout << std::endl << "Введите угол конца дуги: ";
+	std::cin >> finish_angle;
+
+	float current_angle = start_angle;
+	sf::Vector2f new_point;
+
+	bool done = false;
+	while (!done)
+	{
+		if ((current_angle > finish_angle) || fabs(current_angle - finish_angle) < FLT_EPSILON)
+		{
+			current_angle = finish_angle;
+			done = true;
+		}
+
+		new_point = center;
+		new_point += radius * sf::Vector2f(cosf(current_angle), -sinf(current_angle));
+		vertices.append(new_point);
+
+		current_angle += ANGLE_STEP;
+	}
+
+	vertices.setPrimitiveType(sf::PrimitiveType::LinesStrip);
+}
+
+sf::ConvexShape prepareSector(sf::Vector2f& center, const sf::VertexArray& vertices)
 {
 	sf::ConvexShape sector(vertices.getVertexCount() + 1);
 
@@ -70,7 +127,7 @@ sf::ConvexShape prepareSector(const UserInput& user_input, const sf::VertexArray
 		sector.setPoint(i, vertices[i].position);
 	}
 
-	sector.setPoint(vertices.getVertexCount(), user_input.center);
+	sector.setPoint(vertices.getVertexCount(), center);
 
 	sector.setFillColor(sf::Color::White);
 	sector.setOutlineColor(sf::Color::White);
@@ -80,7 +137,41 @@ sf::ConvexShape prepareSector(const UserInput& user_input, const sf::VertexArray
 
 int main()
 {
-	const UserInput user_input = getUserInput();
+	setlocale(LC_ALL, "russian");
+
+	sf::Vector2f center{};
+	sf::VertexArray vertices;
+
+	std::cout << "Выберите способ задания дуги: " << std::endl;
+	std::cout << "1. Координаты точек" << std::endl;
+	std::cout << "2. Углы " << std::endl;
+
+	int choice;
+	std::cin >> choice;
+
+	bool by_dots = false;
+
+	switch (choice)
+	{
+	case 1:
+		by_dots = true;
+		break;
+	case 2:
+		break;
+	default:
+		std::cout << "Неравильный вариант!";
+		return 0;
+		break;
+	}
+
+	if (by_dots)
+	{
+		verticesFromPoints(vertices, center);
+	}
+	else
+	{
+		verticesFromAngles(vertices, center);
+	}
 
 	sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Draw circle");
 	window.setVerticalSyncEnabled(true);
@@ -90,8 +181,8 @@ int main()
 	int frame_time = 0;			// milliseconds
 
 	Mode mode = Mode::ARC;
-	sf::VertexArray vertices = prepareVertices(user_input);
-	sf::ConvexShape sector = prepareSector(user_input, vertices);
+
+	sf::ConvexShape sector = prepareSector(center, vertices);
 	sf::Transform rotation_transform;
 	sf::Transform translation_transform;
 
@@ -126,7 +217,8 @@ int main()
 				)
 			);
 
-			rotation_transform.rotate(ROTATION_SPEED * (float)frame_time * 0.001f, user_input.center);
+			rotation_transform.rotate(ROTATION_SPEED * (float)frame_time * 0.001f, center);
+			window.draw(sector, rotation_transform.combine(translation_transform));
 			break;
 
 		default:
