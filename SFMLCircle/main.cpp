@@ -179,6 +179,7 @@ int main()
 	sf::Clock main_timer;
 	sf::Clock frame_timer;
 	int frame_time = 0;			// milliseconds
+	int mode_time = 0;			// milliseconds
 
 	Mode mode = Mode::ARC;
 
@@ -192,6 +193,8 @@ int main()
 		// узнаем, сколько времени в миллисекундах прошло между кадрами
 		frame_time = frame_timer.getElapsedTime().asMilliseconds();
 		frame_timer.restart();
+
+		mode_time = main_timer.getElapsedTime().asMilliseconds();
 
 		window.clear(sf::Color::Black);
 
@@ -209,16 +212,20 @@ int main()
 
 		case Mode::ROTATING_SECTOR:
 
-			// TODO: think about it
-			translation_transform.translate(
-				sf::Vector2f(
-					TRANSLATION_SPEED * (float)frame_time * 0.001f,
-					0.0
-				)
+			rotation_transform = sf::Transform::Identity;
+			rotation_transform.rotate(-ROTATION_SPEED * (float)mode_time * 0.001f, 0.0f, 0.0f);
+
+			translation_transform = sf::Transform::Identity;
+			translation_transform.translate(sf::Vector2f(
+				TRANSLATION_SPEED * (float)mode_time * 0.001f,
+				0.0)
 			);
 
-			rotation_transform.rotate(ROTATION_SPEED * (float)frame_time * 0.001f, center);
+			rotation_transform = sf::Transform::Identity;
+			rotation_transform.rotate(ROTATION_SPEED * (float)mode_time * 0.001f, translation_transform.transformPoint(center));
+
 			window.draw(sector, rotation_transform.combine(translation_transform));
+
 			break;
 
 		default:
@@ -229,13 +236,10 @@ int main()
 
 		window.display();
 
-		if (main_timer.getElapsedTime().asSeconds() > TIME_INTERVAL)
+		if (main_timer.getElapsedTime().asSeconds() > TIME_INTERVAL && mode != Mode::ROTATING_SECTOR)
 		{
 			main_timer.restart();
-			if (mode != Mode::ROTATING_SECTOR)
-			{
-				mode = (Mode)((int)mode + 1);
-			}
+			mode = (Mode)((int)mode + 1);
 		}
 
 		sf::Event event;
